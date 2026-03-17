@@ -1,469 +1,388 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Local PDF Editor</title>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>PDF Editor — Professional & Local</title>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
 
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
 
-body{
-margin:0;
-font-family:sans-serif;
-background:#0a0a0c;
-color:white;
-overflow:hidden;
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0a0a0c;
+  --surface: #111116;
+  --panel: #16161d;
+  --border: #252530;
+  --accent: #e8ff47;
+  --accent2: #ff4757;
+  --text: #f0f0f5;
+  --muted: #6b6b80;
+  --danger: #ff4757;
+  --success: #47ffb0;
+  --radius: 10px;
+  --sidebar: 260px;
+  --toolbar: 56px;
 }
 
-#app{
-display:flex;
-flex-direction:column;
-height:100vh;
+html, body { height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; }
+
+/* ── LAYOUT ── */
+#app { display: flex; flex-direction: column; height: 100vh; }
+
+#topbar {
+  height: var(--toolbar);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 16px; flex-shrink: 0; z-index: 100;
+}
+.logo { font-size: 15px; font-weight: 800; color: var(--accent); }
+.logo span { color: var(--text); }
+.tb-sep { width: 1px; height: 28px; background: var(--border); }
+
+.tb-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 7px; border: none; cursor: pointer;
+  font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 600;
+  transition: all .15s; white-space: nowrap;
+}
+.tb-btn.primary { background: var(--accent); color: #111; }
+.tb-btn.ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
+.tb-btn.danger { background: rgba(255,71,87,.1); color: var(--danger); border: 1px solid rgba(255,71,87,0.2); }
+.tb-btn:disabled { opacity: .3; pointer-events: none; }
+
+#body { display: flex; flex: 1; overflow: hidden; position: relative; }
+
+/* ── SIDEBAR ── */
+#sidebar {
+  width: var(--sidebar);
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex; flex-direction: column; flex-shrink: 0;
+}
+#page-list { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.page-thumb {
+  border-radius: 8px; border: 2px solid var(--border);
+  background: var(--panel); cursor: pointer; position: relative; overflow: hidden;
+}
+.page-thumb.active { border-color: var(--accent); }
+.page-thumb canvas { width: 100% !important; height: auto !important; display: block; }
+
+/* ── MAIN & TOOLBAR ── */
+#main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+#toolbar {
+  min-height: var(--toolbar); background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; gap: 8px; padding: 0 12px;
+  flex-wrap: wrap; overflow-x: auto;
+}
+.tool-btn {
+  width: 36px; height: 36px; border-radius: 7px; border: none; cursor: pointer;
+  background: transparent; color: var(--muted); display: flex; align-items: center; justify-content: center;
+}
+.tool-btn.active { background: rgba(232,255,71,0.1); color: var(--accent); }
+.tool-btn.active-danger { background: rgba(255,71,87,0.1); color: var(--danger); }
+
+/* ── CANVAS AREA ── */
+#canvas-wrap { flex: 1; overflow: auto; display: flex; justify-content: center; padding: 30px; background: #0e0e12; }
+#canvas-container { position: relative; box-shadow: 0 10px 50px rgba(0,0,0,0.5); }
+#fabric-canvas-el { position: absolute; top: 0; left: 0; touch-action: none; }
+
+/* ── MOBILE RESPONSIVENESS ── */
+@media (max-width: 850px) {
+  #sidebar { position: absolute; left: -100%; z-index: 50; height: 100%; transition: left 0.3s; }
+  #sidebar.open { left: 0; width: 200px; }
+  #toolbar { padding: 8px; height: auto; justify-content: space-around; }
+  .btn-label { display: none; }
+  #canvas-wrap { padding: 10px; }
 }
 
-#topbar{
-height:55px;
-display:flex;
-align-items:center;
-gap:10px;
-padding:0 12px;
-background:#111116;
-border-bottom:1px solid #252530;
-}
-
-button{
-border:none;
-padding:8px 12px;
-border-radius:6px;
-background:#252530;
-color:white;
-cursor:pointer;
-}
-
-.primary{
-background:#e8ff47;
-color:black;
-}
-
-#body{
-flex:1;
-display:flex;
-overflow:hidden;
-}
-
-#sidebar{
-width:240px;
-background:#111116;
-border-right:1px solid #252530;
-overflow-y:auto;
-}
-
-.page-thumb{
-border:2px solid #252530;
-margin:6px;
-border-radius:6px;
-cursor:pointer;
-}
-
-.page-thumb.active{
-border-color:#e8ff47;
-}
-
-#main{
-flex:1;
-display:flex;
-flex-direction:column;
-}
-
-#toolbar{
-height:50px;
-display:flex;
-gap:6px;
-padding:0 10px;
-align-items:center;
-border-bottom:1px solid #252530;
-overflow-x:auto;
-}
-
-#canvas-wrap{
-flex:1;
-overflow:auto;
-display:flex;
-justify-content:center;
-padding:20px;
-}
-
-#canvas-container{
-position:relative;
-}
-
-#fabric-canvas-el{
-position:absolute;
-left:0;
-top:0;
-}
-
-#mobile-nav{
-position:fixed;
-bottom:10px;
-left:50%;
-transform:translateX(-50%);
-background:#16161d;
-padding:8px;
-border-radius:10px;
-display:none;
-gap:10px;
-}
-
-@media(max-width:700px){
-#sidebar{display:none;}
-#mobile-nav{display:flex;}
-}
-
+/* ── WELCOME & UI ── */
+#welcome { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: var(--bg); z-index: 20; }
+.upload-area { border: 2px dashed var(--border); padding: 40px; border-radius: 15px; text-align: center; cursor: pointer; }
+#toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); padding: 12px 24px; background: var(--panel); border: 1px solid var(--border); border-radius: 8px; z-index: 10000; display: none; }
 </style>
 </head>
-
 <body>
 
 <div id="app">
+  <div id="topbar">
+    <div class="logo">PDF<span>Edit</span></div>
+    <div class="tb-sep"></div>
+    <button class="tb-btn primary" onclick="triggerOpen()">
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+      <span class="btn-label">Open</span>
+    </button>
+    <button class="tb-btn ghost" id="btn-save" onclick="savePDF()" disabled>
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+      <span class="btn-label">Download</span>
+    </button>
+    <button class="tb-btn danger" id="btn-del-page" onclick="markDeletePage()" disabled>
+      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
+      <span class="btn-label">Delete Page</span>
+    </button>
+  </div>
 
-<div id="topbar">
-<button class="primary" onclick="triggerOpen()">Open</button>
-<button onclick="savePDF()">Download</button>
-<button onclick="insertImage()">Insert Image</button>
-<span id="page-info"></span>
+  <div id="body">
+    <div id="sidebar">
+      <div id="page-list"></div>
+    </div>
+
+    <div id="main">
+      <div id="toolbar">
+        <button class="tool-btn" id="tool-cursor" onclick="setTool('cursor')" title="Select"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 3l14 9-7 1-3 7z"/></svg></button>
+        <button class="tool-btn" id="tool-redact" onclick="setTool('redact')" title="Redact"><svg width="18" height="18" fill="currentColor" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="2"/></svg></button>
+        <button class="tool-btn" id="tool-white" onclick="setTool('white')" title="White-out"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="10" rx="2"/><line x1="3" y1="12" x2="21" y2="12"/></svg></button>
+        <button class="tool-btn" id="tool-draw" onclick="setTool('draw')" title="Draw"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 19l7-7 3 3-7 7-3-3z"/></svg></button>
+        <button class="tool-btn" id="tool-text" onclick="setTool('text')" title="Text"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 4v16M9 20h6M4 7V4h16v3"/></svg></button>
+        <div class="tb-sep"></div>
+        <input type="color" id="color-pick" value="#e8ff47" oninput="updateColor(this.value)" style="width:30px; height:30px; border:none; background:none; cursor:pointer;">
+        <input type="range" id="brush-size" min="2" max="50" value="10" oninput="updateBrushSize(this.value)" style="width:60px;">
+      </div>
+
+      <div id="canvas-wrap">
+        <div id="welcome">
+          <div class="upload-area" onclick="triggerOpen()">
+            <strong>Click to start</strong>
+            <p style="font-size:12px; color:var(--muted); margin-top:8px;">Offline & Secure PDF Editing</p>
+          </div>
+        </div>
+        <div id="canvas-container" style="display:none;">
+          <canvas id="pdf-canvas"></canvas>
+          <canvas id="fabric-canvas-el"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div id="body">
-
-<div id="sidebar">
-<div id="page-list"></div>
-</div>
-
-<div id="main">
-
-<div id="toolbar">
-<button onclick="setTool('cursor')">Cursor</button>
-<button onclick="setTool('draw')">Draw</button>
-<button onclick="setTool('text')">Text</button>
-<button onclick="setTool('redact')">Redact</button>
-</div>
-
-<div id="canvas-wrap">
-<div id="canvas-container">
-<canvas id="pdf-canvas"></canvas>
-<canvas id="fabric-canvas-el"></canvas>
-</div>
-</div>
-
-</div>
-</div>
-</div>
-
-<div id="mobile-nav">
-<button onclick="prevPage()">◀</button>
-<span id="mobile-page">1</span>
-<button onclick="nextPage()">▶</button>
-</div>
-
-<input type="file" id="file-input" accept=".pdf" style="display:none">
-<input type="file" id="img-input" accept="image/*" style="display:none">
+<div id="toast"></div>
+<input type="file" id="file-input" accept=".pdf" style="display:none" onchange="loadFile(this)" />
 
 <script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc =
-"https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+let pdfDoc = null, pdfBytes = null, currentPage = 1, totalPages = 0;
+let scale = 1.5, currentTool = 'cursor', currentColor = '#e8ff47', brushSize = 10;
+let pageEdits = {}, fabricCanvas = null, currentFilename = 'edited.pdf';
 
-let pdfDoc
-let pdfBytes
-let currentPage=1
-let totalPages=0
-let scale=1.5
-let fabricCanvas
-let pageEdits={}
-let pageOrder=[]
+function triggerOpen() { document.getElementById('file-input').click(); }
 
-function triggerOpen(){
-document.getElementById("file-input").click()
+async function loadFile(inp) {
+  const file = inp.files[0];
+  if (!file) return;
+  currentFilename = file.name.replace('.pdf', '-edited.pdf');
+  const ab = await file.arrayBuffer();
+  pdfBytes = new Uint8Array(ab);
+  await openPDFBytes(pdfBytes);
 }
 
-document.getElementById("file-input").onchange=async e=>{
-let file=e.target.files[0]
-let ab=await file.arrayBuffer()
-pdfBytes=new Uint8Array(ab)
-openPDFBytes(pdfBytes)
+async function openPDFBytes(bytes) {
+  try {
+    showToast('Loading...');
+    pdfDoc = await pdfjsLib.getDocument({ data: bytes }).promise;
+    totalPages = pdfDoc.numPages;
+    document.getElementById('welcome').style.display = 'none';
+    document.getElementById('canvas-container').style.display = 'block';
+    enableUI(true);
+    await buildThumbs();
+    await renderPage(1);
+    showToast('Ready', 'success');
+  } catch (e) { showToast('Error loading PDF', 'danger'); }
 }
 
-async function openPDFBytes(bytes){
-
-pdfDoc=await pdfjsLib.getDocument({data:bytes}).promise
-totalPages=pdfDoc.numPages
-
-pageOrder=[]
-for(let i=1;i<=totalPages;i++)pageOrder.push(i)
-
-buildThumbs()
-renderPage(1)
-
+function enableUI(on) {
+  ['btn-save','btn-del-page'].forEach(id => document.getElementById(id).disabled = !on);
 }
 
-async function buildThumbs(){
-
-let list=document.getElementById("page-list")
-list.innerHTML=""
-
-for(let i=1;i<=totalPages;i++){
-
-let page=await pdfDoc.getPage(i)
-let vp=page.getViewport({scale:.2})
-
-let c=document.createElement("canvas")
-c.width=vp.width
-c.height=vp.height
-
-await page.render({
-canvasContext:c.getContext("2d"),
-viewport:vp
-}).promise
-
-let d=document.createElement("div")
-d.className="page-thumb"
-d.dataset.page=i
-d.onclick=()=>goToPage(i)
-
-d.appendChild(c)
-list.appendChild(d)
-
+async function buildThumbs() {
+  const list = document.getElementById('page-list');
+  list.innerHTML = '';
+  for (let i = 1; i <= totalPages; i++) {
+    const thumb = document.createElement('div');
+    thumb.className = `page-thumb ${i === currentPage ? 'active' : ''}`;
+    thumb.onclick = () => renderPage(i);
+    const page = await pdfDoc.getPage(i);
+    const tc = document.createElement('canvas');
+    const vp = page.getViewport({ scale: 0.2 });
+    tc.width = vp.width; tc.height = vp.height;
+    await page.render({ canvasContext: tc.getContext('2d'), viewport: vp }).promise;
+    thumb.appendChild(tc);
+    list.appendChild(thumb);
+  }
 }
 
-Sortable.create(list,{
-animation:150,
-onEnd:e=>{
-let item=pageOrder.splice(e.oldIndex,1)[0]
-pageOrder.splice(e.newIndex,0,item)
-}
-})
+async function renderPage(num) {
+  if (fabricCanvas) saveCurrentEdits();
+  currentPage = num;
+  const page = await pdfDoc.getPage(num);
+  const vp = page.getViewport({ scale });
+  
+  const pCanvas = document.getElementById('pdf-canvas');
+  pCanvas.width = vp.width; pCanvas.height = vp.height;
+  await page.render({ canvasContext: pCanvas.getContext('2d'), viewport: vp }).promise;
 
-}
+  const container = document.getElementById('canvas-container');
+  container.style.width = vp.width + 'px'; container.style.height = vp.height + 'px';
 
-async function renderPage(num){
-
-currentPage=num
-
-let page=await pdfDoc.getPage(num)
-let vp=page.getViewport({scale})
-
-let canvas=document.getElementById("pdf-canvas")
-canvas.width=vp.width
-canvas.height=vp.height
-
-await page.render({
-canvasContext:canvas.getContext("2d"),
-viewport:vp
-}).promise
-
-let f=document.getElementById("fabric-canvas-el")
-f.width=vp.width
-f.height=vp.height
-
-if(fabricCanvas)fabricCanvas.dispose()
-
-fabricCanvas=new fabric.Canvas("fabric-canvas-el",{
-width:vp.width,
-height:vp.height
-})
-
-applyTool()
-
-fabricCanvas.on("mouse:down",opt=>{
-if(opt.target){
-let timer=setTimeout(()=>{
-fabricCanvas.remove(opt.target)
-fabricCanvas.renderAll()
-},800)
-fabricCanvas.on("mouse:up",()=>clearTimeout(timer))
-}
-})
-
-document.getElementById("mobile-page").innerText=num
-
+  if (fabricCanvas) fabricCanvas.dispose();
+  fabricCanvas = new fabric.Canvas('fabric-canvas-el', { width: vp.width, height: vp.height });
+  
+  if (pageEdits[num]) {
+    fabricCanvas.loadFromJSON(pageEdits[num], () => fabricCanvas.renderAll());
+  }
+  
+  initFabricEvents();
+  setTool(currentTool);
+  document.querySelectorAll('.page-thumb').forEach((t, i) => t.classList.toggle('active', i+1 === num));
 }
 
-function goToPage(n){
-renderPage(n)
+function saveCurrentEdits() {
+  pageEdits[currentPage] = fabricCanvas.toJSON();
 }
 
-function nextPage(){
-if(currentPage<totalPages)renderPage(currentPage+1)
+async function markDeletePage() {
+  if (totalPages <= 1) return showToast('Cannot delete last page');
+  if (!confirm(`Delete Page ${currentPage}?`)) return;
+
+  const { PDFDocument } = PDFLib;
+  const doc = await PDFDocument.load(pdfBytes);
+  doc.removePage(currentPage - 1);
+  pdfBytes = await doc.save();
+  
+  // Shift edits
+  const newEdits = {};
+  Object.keys(pageEdits).forEach(k => {
+    const p = parseInt(k);
+    if (p < currentPage) newEdits[p] = pageEdits[p];
+    if (p > currentPage) newEdits[p-1] = pageEdits[p];
+  });
+  pageEdits = newEdits;
+  await openPDFBytes(pdfBytes);
 }
 
-function prevPage(){
-if(currentPage>1)renderPage(currentPage-1)
+function setTool(t) {
+  currentTool = t;
+  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active', 'active-danger'));
+  const btn = document.getElementById('tool-'+t);
+  if (btn) btn.classList.add(t === 'redact' ? 'active-danger' : 'active');
+  
+  fabricCanvas.isDrawingMode = (t === 'draw');
+  fabricCanvas.selection = (t === 'cursor');
+  if (t === 'draw') {
+    fabricCanvas.freeDrawingBrush.color = currentColor;
+    fabricCanvas.freeDrawingBrush.width = brushSize;
+  }
 }
 
-let currentTool="cursor"
+function initFabricEvents() {
+  let isDown, startX, startY, rect;
 
-function setTool(t){
-currentTool=t
-applyTool()
+  fabricCanvas.on('mouse:down', (o) => {
+    if (!['redact','white'].includes(currentTool)) return;
+    isDown = true;
+    const pointer = fabricCanvas.getPointer(o.e);
+    startX = pointer.x; startY = pointer.y;
+    rect = new fabric.Rect({
+      left: startX, top: startY, width: 0, height: 0,
+      fill: currentTool === 'redact' ? 'black' : 'white',
+      selectable: true
+    });
+    fabricCanvas.add(rect);
+  });
+
+  fabricCanvas.on('mouse:move', (o) => {
+    if (!isDown) return;
+    const pointer = fabricCanvas.getPointer(o.e);
+    rect.set({ 
+      width: Math.abs(startX - pointer.x), 
+      height: Math.abs(startY - pointer.y),
+      left: Math.min(pointer.x, startX),
+      top: Math.min(pointer.y, startY)
+    });
+    fabricCanvas.renderAll();
+  });
+
+  fabricCanvas.on('mouse:up', () => { 
+    isDown = false; 
+    if (currentTool === 'text') addTextPrompt();
+  });
 }
 
-function applyTool(){
-
-if(!fabricCanvas)return
-
-fabricCanvas.isDrawingMode=currentTool==="draw"
-
-if(currentTool==="draw"){
-fabricCanvas.freeDrawingBrush.width=5
-fabricCanvas.freeDrawingBrush.color="yellow"
+function addTextPrompt() {
+  const val = prompt("Enter text:");
+  if (val) {
+    const text = new fabric.IText(val, { left: 100, top: 100, fill: currentColor, fontSize: brushSize * 2 });
+    fabricCanvas.add(text);
+  }
 }
 
+async function savePDF() {
+  saveCurrentEdits();
+  showToast('Exporting...');
+  try {
+    const { PDFDocument, rgb, grayscale } = PDFLib;
+    const doc = await PDFDocument.load(pdfBytes);
+    const pages = doc.getPages();
+
+    for (let i = 0; i < pages.length; i++) {
+      const edits = pageEdits[i + 1];
+      if (!edits || !edits.objects) continue;
+      
+      const page = pages[i];
+      const { width, height } = page.getSize();
+      
+      // Calculate scaling factor between preview canvas and real PDF dimensions
+      const pjsPage = await pdfDoc.getPage(i + 1);
+      const vp = pjsPage.getViewport({ scale });
+      const sx = width / vp.width;
+      const sy = height / vp.height;
+
+      for (const obj of edits.objects) {
+        const x = obj.left * sx;
+        const y = height - ((obj.top + (obj.height * (obj.scaleY || 1))) * sy);
+        const w = obj.width * (obj.scaleX || 1) * sx;
+        const h = obj.height * (obj.scaleY || 1) * sy;
+
+        if (obj.type === 'rect') {
+          page.drawRectangle({ x, y, width: w, height: h, color: obj.fill === 'black' ? grayscale(0) : grayscale(1) });
+        } else if (obj.type === 'i-text' || obj.type === 'text') {
+            page.drawText(obj.text, { x, y: height - (obj.top * sy) - (obj.fontSize * sy), size: obj.fontSize * sy, color: hexToRgbLib(obj.fill, PDFLib) });
+        }
+      }
+    }
+    const bytes = await doc.save();
+    const blob = new Blob([bytes], { type: 'application/pdf' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = currentFilename;
+    link.click();
+    showToast('Downloaded!', 'success');
+  } catch (e) { showToast('Error saving', 'danger'); }
 }
 
-document.getElementById("canvas-container").onclick=e=>{
-
-if(currentTool==="text"){
-
-let rect=e.target.getBoundingClientRect()
-let x=e.clientX-rect.left
-let y=e.clientY-rect.top
-
-let txt=new fabric.IText("Text",{
-left:x,
-top:y,
-fill:"yellow",
-fontSize:20
-})
-
-fabricCanvas.add(txt)
-
+function hexToRgbLib(hex, lib) {
+  const r = parseInt(hex.slice(1,3), 16) / 255;
+  const g = parseInt(hex.slice(3,5), 16) / 255;
+  const b = parseInt(hex.slice(5,7), 16) / 255;
+  return lib.rgb(r, g, b);
 }
 
-if(currentTool==="redact"){
+function updateColor(v) { currentColor = v; if(fabricCanvas.isDrawingMode) fabricCanvas.freeDrawingBrush.color = v; }
+function updateBrushSize(v) { brushSize = parseInt(v); if(fabricCanvas.isDrawingMode) fabricCanvas.freeDrawingBrush.width = brushSize; }
 
-let rect=e.target.getBoundingClientRect()
-let x=e.clientX-rect.left
-let y=e.clientY-rect.top
-
-let box=new fabric.Rect({
-left:x,
-top:y,
-width:120,
-height:30,
-fill:"black"
-})
-
-fabricCanvas.add(box)
-
+function showToast(m, type) {
+  const t = document.getElementById('toast');
+  t.textContent = m; t.style.display = 'block';
+  t.style.color = type === 'success' ? '#47ffb0' : type === 'danger' ? '#ff4757' : '#fff';
+  setTimeout(() => t.style.display = 'none', 3000);
 }
-
-}
-
-function insertImage(){
-document.getElementById("img-input").click()
-}
-
-document.getElementById("img-input").onchange=e=>{
-
-let file=e.target.files[0]
-let reader=new FileReader()
-
-reader.onload=function(f){
-
-fabric.Image.fromURL(f.target.result,function(img){
-
-img.scaleToWidth(200)
-fabricCanvas.add(img)
-
-})
-
-}
-
-reader.readAsDataURL(file)
-
-}
-
-async function savePDF(){
-
-const {PDFDocument,rgb}=PDFLib
-
-const src=await PDFDocument.load(pdfBytes)
-const newDoc=await PDFDocument.create()
-
-const pages=await newDoc.copyPages(src,pageOrder.map(p=>p-1))
-pages.forEach(p=>newDoc.addPage(p))
-
-const bytes=await newDoc.save()
-
-downloadBytes(bytes,"edited.pdf")
-
-}
-
-function downloadBytes(bytes,name){
-
-let blob=new Blob([bytes],{type:"application/pdf"})
-let a=document.createElement("a")
-
-a.href=URL.createObjectURL(blob)
-a.download=name
-
-document.body.appendChild(a)
-a.click()
-document.body.removeChild(a)
-
-}
-
-let startX=0
-
-document.addEventListener("touchstart",e=>{
-startX=e.touches[0].clientX
-})
-
-document.addEventListener("touchend",e=>{
-
-let endX=e.changedTouches[0].clientX
-
-if(startX-endX>80)nextPage()
-if(endX-startX>80)prevPage()
-
-})
-
-let lastDist=0
-
-document.addEventListener("touchmove",e=>{
-
-if(e.touches.length==2){
-
-const dx=e.touches[0].clientX-e.touches[1].clientX
-const dy=e.touches[0].clientY-e.touches[1].clientY
-const dist=Math.sqrt(dx*dx+dy*dy)
-
-if(lastDist){
-
-if(dist>lastDist)zoom(.05)
-else zoom(-.05)
-
-}
-
-lastDist=dist
-
-}
-
-})
-
-document.addEventListener("touchend",()=>lastDist=0)
-
-function zoom(d){
-scale=Math.max(.4,Math.min(3,scale+d))
-renderPage(currentPage)
-}
-
 </script>
 </body>
 </html>
