@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-<title>Pro PDF Editor · delete pages · mobile</title>
+<title>PDF Editor · zoom · stable delete · mobile</title>
 
 <!-- PDF.js (rendering) + PDF-lib (modify) + Fabric.js (annotations) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -82,20 +82,31 @@ body {
 
 #tools {
   height: 50px; background: var(--panel); border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; padding: 0 15px; gap: 8px; overflow-x: auto;
+  display: flex; align-items: center; padding: 0 10px; gap: 6px; overflow-x: auto;
+  flex-shrink: 0;
 }
 .tool-btn {
   width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
   background: transparent; border: none; color: var(--muted); cursor: pointer; border-radius: 6px;
+  font-size: 18px; flex-shrink: 0;
 }
 .tool-btn.active { background: rgba(232,255,71,0.1); color: var(--accent); }
 .tool-btn:hover:not(.active) { background: var(--border); }
+.zoom-indicator {
+  color: var(--text); font-size: 13px; font-weight: 600; margin: 0 4px;
+  background: var(--surface); padding: 4px 8px; border-radius: 20px;
+  border: 1px solid var(--border); white-space: nowrap;
+}
 
 #canvas-outer {
-  flex: 1; overflow: auto; display: flex; justify-content: center; padding: 40px;
-  scroll-behavior: smooth;
+  flex: 1; overflow: auto; display: flex; justify-content: center; padding: 20px;
+  scroll-behavior: smooth; -webkit-overflow-scrolling: touch;
 }
-#canvas-viewport { position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
+#canvas-viewport {
+  position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  transform-origin: 0 0; /* zoom from top-left */
+  transition: transform 0.1s ease;
+}
 #fabric-canvas-container { position: absolute; top: 0; left: 0; }
 
 /* mobile adaptation */
@@ -108,6 +119,8 @@ body {
   .thumb-wrapper { width: 80px; flex-shrink: 0; }
   #canvas-outer { padding: 10px; }
   .btn span { display: none; }
+  #tools { gap: 3px; }
+  .tool-btn { width: 40px; height: 40px; } /* bigger touch target */
 }
 
 #welcome-screen {
@@ -118,8 +131,16 @@ body {
 #toast {
   position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
   padding: 10px 20px; border-radius: 8px; background: var(--panel);
-  border: 1px solid var(--border); font-size: 13px; display: none; z-index: 1000;
+  border: 1px solid var(--border); font-size: 14px; display: none; z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
 }
+.loading-overlay {
+  position: absolute; inset: 0; background: rgba(0,0,0,0.5); z-index: 300;
+  display: flex; align-items: center; justify-content: center;
+  backdrop-filter: blur(2px); display: none;
+}
+.spinner { width: 40px; height: 40px; border: 4px solid var(--accent); border-top-color: transparent; border-radius: 50%; animation: spin 0.8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>
 </head>
 <body>
@@ -129,7 +150,7 @@ body {
     <div class="logo">PDF<span>PRO</span></div>
     <button class="btn btn-primary" onclick="triggerFile()">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      <span>Open File</span>
+      <span>Open</span>
     </button>
     <button class="btn btn-ghost" id="dl-btn" onclick="exportPDF()" disabled>
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
@@ -138,7 +159,7 @@ body {
     <div style="flex:1"></div>
     <button class="btn btn-danger" id="del-pg-btn" onclick="deleteCurrentPage()" disabled>
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-      <span>Delete Page</span>
+      <span>Delete</span>
     </button>
   </header>
 
@@ -149,13 +170,18 @@ body {
 
     <main id="editor-area">
       <div id="tools">
-        <button class="tool-btn active" id="t-select" onclick="setTool('select')" title="Select & Move (V)"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 3l14 9-7 1-3 7z"/></svg></button>
-        <button class="tool-btn" id="t-redact" onclick="setTool('redact')" title="Black Box (B)"><svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/></svg></button>
-        <button class="tool-btn" id="t-white" onclick="setTool('white')" title="White Box (W)"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/></svg></button>
-        <button class="tool-btn" id="t-text" onclick="setTool('text')" title="Add Text (T)"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></button>
+        <button class="tool-btn active" id="t-select" onclick="setTool('select')" title="Select (V)">➤</button>
+        <button class="tool-btn" id="t-redact" onclick="setTool('redact')" title="Black box (B)">⬛</button>
+        <button class="tool-btn" id="t-white" onclick="setTool('white')" title="White box (W)">⬜</button>
+        <button class="tool-btn" id="t-text" onclick="setTool('text')" title="Add text (T)">T</button>
         <div style="width:1px; height:24px; background:var(--border); margin:0 5px;"></div>
-        <button class="tool-btn" onclick="copyObj()" title="Copy (Ctrl+C)"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
-        <button class="tool-btn" onclick="pasteObj()" title="Paste (Ctrl+V)"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg></button>
+        <button class="tool-btn" onclick="zoomOut()" title="Zoom out">−</button>
+        <span class="zoom-indicator" id="zoomLevelDisplay">100%</span>
+        <button class="tool-btn" onclick="zoomIn()" title="Zoom in">+</button>
+        <button class="tool-btn" onclick="zoomReset()" title="Reset zoom">↺</button>
+        <div style="width:1px; height:24px; background:var(--border); margin:0 5px;"></div>
+        <button class="tool-btn" onclick="copyObj()" title="Copy (Ctrl+C)">📋</button>
+        <button class="tool-btn" onclick="pasteObj()" title="Paste (Ctrl+V)">📌</button>
       </div>
 
       <div id="canvas-outer">
@@ -167,9 +193,9 @@ body {
         </div>
         
         <div id="welcome-screen">
-          <h1 style="margin-bottom:10px">Quick PDF <span>Editor</span></h1>
-          <p style="color:var(--muted); margin-bottom:20px">No uploads. Fast editing. Mobile responsive.</p>
-          <button class="btn btn-primary" style="padding:15px 30px" onclick="triggerFile()">Get Started</button>
+          <h1 style="margin-bottom:10px">PDF <span>Editor</span></h1>
+          <p style="color:var(--muted); margin-bottom:20px">Zoom, delete, annotate. Mobile ready.</p>
+          <button class="btn btn-primary" style="padding:15px 30px" onclick="triggerFile()">Open PDF</button>
         </div>
       </div>
     </main>
@@ -177,22 +203,33 @@ body {
 </div>
 
 <div id="toast"></div>
+<div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
 <input type="file" id="file-input" accept="application/pdf" style="display:none" onchange="handleFile(this)">
 
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 let pdfDoc = null;               // PDF.js document
-let pdfBytes = null;             // original/edited bytes (Uint8Array)
+let pdfBytes = null;             // current PDF as Uint8Array
 let fCanvas = null;              // fabric canvas instance
-let currentPage = 1, totalPages = 0, scale = 1.5;
-let pageEdits = {};              // stores fabric JSON per page
+let currentPage = 1, totalPages = 0;
+const BASE_RENDER_SCALE = 1.5;    // fixed render scale (canvas size)
+let zoomLevel = 1.0;              // visual zoom (CSS transform)
+let pageEdits = {};               // fabric JSON per page
 let clipboard = null;
 let activeTool = 'select';
 
-// Helper toasts
-function msg(text, bg = '#47ffb0', color = '#000') {
-  const toast = document.getElementById('toast');
+// DOM elements
+const viewportDiv = document.getElementById('canvas-viewport');
+const zoomDisplay = document.getElementById('zoomLevelDisplay');
+const loadingOverlay = document.getElementById('loadingOverlay');
+const toast = document.getElementById('toast');
+
+function showLoading(show) {
+  loadingOverlay.style.display = show ? 'flex' : 'none';
+}
+
+function msg(text, bg = '#333', color = '#e8ff47') {
   toast.textContent = text;
   toast.style.background = bg;
   toast.style.color = color;
@@ -202,41 +239,45 @@ function msg(text, bg = '#47ffb0', color = '#000') {
 
 function triggerFile() { document.getElementById('file-input').click(); }
 
-// File selected: read as bytes
 async function handleFile(input) {
   const file = input.files[0];
   if (!file) return;
+  showLoading(true);
   try {
     const buffer = await file.arrayBuffer();
     pdfBytes = new Uint8Array(buffer);
     await initEditor();
   } catch (e) {
-    msg('Error reading file', '#ff4757', '#fff');
+    console.error(e);
+    msg('❌ File error', '#ff4757', '#fff');
+  } finally {
+    showLoading(false);
   }
 }
 
-// Initialise PDF.js, reset edits, load first page
 async function initEditor() {
   try {
-    msg('Loading PDF...', '#333', '#e8ff47');
     pdfDoc = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
     totalPages = pdfDoc.numPages;
     
     document.getElementById('welcome-screen').style.display = 'none';
-    document.getElementById('canvas-viewport').style.display = 'block';
+    viewportDiv.style.display = 'block';
     document.getElementById('dl-btn').disabled = false;
     document.getElementById('del-pg-btn').disabled = false;
 
-    pageEdits = {};        // fresh start
+    pageEdits = {};
+    zoomLevel = 1.0;
+    updateZoomDisplay();
     await refreshThumbnails();
     await loadPage(1);
-    msg(`✅ Ready — ${totalPages} pages`, '#1e1e2f', '#e8ff47');
+    msg(`📄 ${totalPages} pages loaded`, '#1e2a2f', '#e8ff47');
   } catch(e) {
+    console.error(e);
     msg('❌ Corrupt PDF', '#ff4757', '#fff');
   }
 }
 
-// Render thumbnails (scale 0.2)
+// Thumbnails at scale 0.3 (slightly larger)
 async function refreshThumbnails() {
   const container = document.getElementById('thumb-container');
   container.innerHTML = '';
@@ -247,7 +288,7 @@ async function refreshThumbnails() {
     
     const canvas = document.createElement('canvas');
     const page = await pdfDoc.getPage(i);
-    const vp = page.getViewport({ scale: 0.2 });
+    const vp = page.getViewport({ scale: 0.3 }); // bigger thumb
     canvas.width = vp.width; canvas.height = vp.height;
     await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
     
@@ -259,53 +300,86 @@ async function refreshThumbnails() {
   }
 }
 
-// Load specific page into fabric + pdf canvas
+// Load specific page (always render at BASE_RENDER_SCALE)
 async function loadPage(num) {
-  // save current edits before switching
-  if (fCanvas) pageEdits[currentPage] = fCanvas.toJSON();
+  showLoading(true);
+  try {
+    // Save current edits before switching
+    if (fCanvas) pageEdits[currentPage] = fCanvas.toJSON();
 
-  currentPage = num;
-  const page = await pdfDoc.getPage(num);
-  const vp = page.getViewport({ scale });
+    currentPage = num;
+    const page = await pdfDoc.getPage(num);
+    const vp = page.getViewport({ scale: BASE_RENDER_SCALE });
 
-  // render background PDF
-  const pdfCanv = document.getElementById('pdf-render-canvas');
-  pdfCanv.width = vp.width; pdfCanv.height = vp.height;
-  await page.render({ canvasContext: pdfCanv.getContext('2d'), viewport: vp }).promise;
+    // Render PDF background
+    const pdfCanv = document.getElementById('pdf-render-canvas');
+    pdfCanv.width = vp.width;
+    pdfCanv.height = vp.height;
+    await page.render({ canvasContext: pdfCanv.getContext('2d'), viewport: vp }).promise;
 
-  // resize viewport container
-  const view = document.getElementById('canvas-viewport');
-  view.style.width = vp.width + 'px';
-  view.style.height = vp.height + 'px';
+    // Set viewport size (without zoom)
+    viewportDiv.style.width = vp.width + 'px';
+    viewportDiv.style.height = vp.height + 'px';
+    // Apply current zoom
+    viewportDiv.style.transform = `scale(${zoomLevel})`;
 
-  // (re)create fabric canvas
-  if (fCanvas) fCanvas.dispose();
-  fCanvas = new fabric.Canvas('f-canvas', {
-    width: vp.width,
-    height: vp.height,
-    selection: true,
-    preserveObjectStacking: true
-  });
-
-  // restore any edits for this page
-  if (pageEdits[num]) {
-    fCanvas.loadFromJSON(pageEdits[num], () => {
-      fCanvas.renderAll();
-      setTool(activeTool); // reapply cursor
+    // Recreate fabric canvas with same dimensions
+    if (fCanvas) fCanvas.dispose();
+    fCanvas = new fabric.Canvas('f-canvas', {
+      width: vp.width,
+      height: vp.height,
+      selection: true,
+      preserveObjectStacking: true
     });
-  } else {
-    setTool(activeTool);
+
+    // Restore page edits if any
+    if (pageEdits[num]) {
+      fCanvas.loadFromJSON(pageEdits[num], () => {
+        fCanvas.renderAll();
+        setTool(activeTool);
+      });
+    } else {
+      setTool(activeTool);
+    }
+
+    initFabricEvents();
+
+    // Update active thumbnail
+    document.querySelectorAll('.thumb-wrapper').forEach((t, idx) => {
+      t.classList.toggle('active', idx + 1 === num);
+    });
+  } catch (e) {
+    console.error('loadPage error', e);
+    msg('⚠️ Failed to load page', '#ff4757', '#fff');
+  } finally {
+    showLoading(false);
   }
-
-  initFabricEvents();
-
-  // update active thumbnail highlight
-  document.querySelectorAll('.thumb-wrapper').forEach((t, idx) => {
-    t.classList.toggle('active', idx + 1 === num);
-  });
 }
 
-// ----- TOOLS (redact/white/text) -----
+// ----- ZOOM (CSS transform) -----
+function updateZoomDisplay() {
+  zoomDisplay.textContent = Math.round(zoomLevel * 100) + '%';
+}
+
+function zoomIn() {
+  zoomLevel = Math.min(3.0, zoomLevel * 1.2);
+  viewportDiv.style.transform = `scale(${zoomLevel})`;
+  updateZoomDisplay();
+}
+
+function zoomOut() {
+  zoomLevel = Math.max(0.3, zoomLevel / 1.2);
+  viewportDiv.style.transform = `scale(${zoomLevel})`;
+  updateZoomDisplay();
+}
+
+function zoomReset() {
+  zoomLevel = 1.0;
+  viewportDiv.style.transform = `scale(${zoomLevel})`;
+  updateZoomDisplay();
+}
+
+// ----- TOOLS -----
 function setTool(t) {
   activeTool = t;
   document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
@@ -317,7 +391,7 @@ function setTool(t) {
   fCanvas.discardActiveObject().renderAll();
 }
 
-// Fabric event handlers for drawing rectangles / adding text
+// Fabric drawing events
 function initFabricEvents() {
   let isDown = false, startX, startY, activeRect;
 
@@ -354,7 +428,7 @@ function initFabricEvents() {
         fCanvas.add(textObj);
         fCanvas.setActiveObject(textObj);
       }
-      setTool('select');  // go back to select after adding text
+      setTool('select');
     }
   });
 
@@ -374,38 +448,37 @@ function initFabricEvents() {
 
   fCanvas.on('mouse:up', () => {
     if (isDown && activeRect) {
-      // if rectangle is tiny, remove it (accidental click)
       if (activeRect.width < 5 || activeRect.height < 5) {
         fCanvas.remove(activeRect);
       }
       isDown = false;
       activeRect = null;
-      setTool('select'); // auto switch to select after drawing
+      setTool('select');
     }
   });
 }
 
-// ----- DELETE PAGE (core fix) -----
+// ----- DELETE PAGE (fixed) -----
 async function deleteCurrentPage() {
   if (!pdfDoc || totalPages <= 1) {
     return msg('Cannot delete the only page', '#ff4757', '#fff');
   }
-  if (!confirm(`Delete page ${currentPage}?`)) return;
+  if (!confirm(`Permanently delete page ${currentPage}?`)) return;
 
+  showLoading(true);
   try {
-    // 1. Use PDF-lib to remove page
     const { PDFDocument } = PDFLib;
     const doc = await PDFDocument.load(pdfBytes);
-    doc.removePage(currentPage - 1);          // zero‑based index
-    const newBytes = await doc.save();        // Uint8Array
-
-    // 2. Update pdfBytes and reload pdf.js document
+    doc.removePage(currentPage - 1); // zero‑based
+    const newBytes = await doc.save();
+    
+    // Update pdfBytes and reload pdf.js document
     pdfBytes = newBytes;
     pdfDoc = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
     const oldTotal = totalPages;
     totalPages = pdfDoc.numPages;
 
-    // 3. Shift pageEdits (remove current page, renumber higher pages)
+    // Shift pageEdits: remove current, renumber higher pages
     const newEdits = {};
     for (let p in pageEdits) {
       const pg = parseInt(p);
@@ -414,18 +487,19 @@ async function deleteCurrentPage() {
     }
     pageEdits = newEdits;
 
-    // 4. Adjust currentPage if beyond new total
+    // Determine new current page
     let targetPage = currentPage;
     if (targetPage > totalPages) targetPage = totalPages;
 
-    // 5. Regenerate thumbnails and load target page
     await refreshThumbnails();
     await loadPage(targetPage);
 
-    msg(`Page ${currentPage} deleted. Now ${totalPages} pages.`, '#1e1e2f', '#e8ff47');
+    msg(`Page deleted. Now ${totalPages} pages.`, '#1e2a2f', '#e8ff47');
   } catch (err) {
-    console.error(err);
-    msg('Delete failed', '#ff4757', '#fff');
+    console.error('Delete error:', err);
+    msg('❌ Delete failed', '#ff4757', '#fff');
+  } finally {
+    showLoading(false);
   }
 }
 
@@ -444,23 +518,22 @@ function pasteObj() {
   clipboard.clone((cloned) => {
     fCanvas.discardActiveObject();
     cloned.set({
-      left: cloned.left + 20,
-      top: cloned.top + 20,
+      left: (cloned.left || 0) + 20,
+      top: (cloned.top || 0) + 20,
       evented: true,
     });
-    if (cloned.type === 'activeSelection') cloned.canvas = fCanvas;
     fCanvas.add(cloned);
     fCanvas.setActiveObject(cloned);
     fCanvas.requestRenderAll();
   });
 }
 
-// ----- EXPORT with annotations (rectangles and text) -----
+// ----- EXPORT with annotations -----
 async function exportPDF() {
-  // save current page edits
   if (fCanvas) pageEdits[currentPage] = fCanvas.toJSON();
 
-  msg('🔄 applying edits...', '#222', '#e8ff47');
+  showLoading(true);
+  msg('🔄 Building PDF...', '#222', '#e8ff47');
   try {
     const { PDFDocument, rgb, grayscale } = PDFLib;
     const doc = await PDFDocument.load(pdfBytes);
@@ -474,14 +547,13 @@ async function exportPDF() {
       const page = pages[i];
       const { width, height } = page.getSize();
 
-      // we need original PDF.js page to compute viewport ratio
+      // Need original PDF.js page to get viewport (same base scale)
       const pjsPage = await pdfDoc.getPage(pageNum);
-      const vp = pjsPage.getViewport({ scale });
+      const vp = pjsPage.getViewport({ scale: BASE_RENDER_SCALE });
       const scaleX = width / vp.width;
       const scaleY = height / vp.height;
 
       for (const obj of edits.objects) {
-        // fabric rectangles (redact or white)
         if (obj.type === 'rect') {
           const x = obj.left * scaleX;
           const y = height - (obj.top + (obj.height * (obj.scaleY || 1))) * scaleY;
@@ -489,23 +561,15 @@ async function exportPDF() {
           const rectHeight = obj.height * (obj.scaleY || 1) * scaleY;
 
           const fillColor = (obj.fill === 'black' || obj.fill === '#000000') ? grayscale(0) : grayscale(1);
-          page.drawRectangle({
-            x, y,
-            width: rectWidth,
-            height: rectHeight,
-            color: fillColor,
-          });
+          page.drawRectangle({ x, y, width: rectWidth, height: rectHeight, color: fillColor });
         }
-        // i-text objects
         else if (obj.type === 'i-text' || obj.type === 'text') {
           const fontSize = (obj.fontSize || 20) * scaleY;
           const textX = obj.left * scaleX;
-          const textY = height - (obj.top * scaleY) - fontSize * 0.8; // adjust baseline
+          const textY = height - (obj.top * scaleY) - fontSize * 0.8;
           page.drawText(obj.text || '', {
-            x: textX,
-            y: textY,
-            size: fontSize,
-            color: rgb(0.9, 1.0, 0.2), // yellowish
+            x: textX, y: textY, size: fontSize,
+            color: rgb(0.9, 1.0, 0.2),
             font: await doc.embedFont(PDFLib.StandardFonts.Helvetica)
           });
         }
@@ -523,7 +587,9 @@ async function exportPDF() {
     msg('✅ Download ready', '#47ffb0', '#000');
   } catch (e) {
     console.error(e);
-    msg('Export failed', '#ff4757', '#fff');
+    msg('❌ Export failed', '#ff4757', '#fff');
+  } finally {
+    showLoading(false);
   }
 }
 
@@ -546,10 +612,7 @@ window.addEventListener('keydown', (e) => {
   }
 });
 
-// patch for touch devices: ensure canvas reacts
-window.addEventListener('load', () => {
-  // ensure file input works on mobile
-});
+// Touch support: ensure fabric receives touch events (it does by default)
 </script>
 </body>
 </html>
