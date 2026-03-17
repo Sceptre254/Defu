@@ -21,33 +21,26 @@
   --text: #f0f0f5;
   --muted: #6b6b80;
   --danger: #ff4757;
-  --toolbar-h: 60px;
-  --sidebar-w: 220px;
+  --toolbar-h: 65px;
+  --sidebar-w: 240px;
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
-body { 
-  height: 100vh; overflow: hidden; background: var(--bg); 
-  color: var(--text); font-family: 'Syne', sans-serif; 
-}
+body { height: 100vh; overflow: hidden; background: var(--bg); color: var(--text); font-family: 'Syne', sans-serif; }
 
-/* ── LAYOUT ── */
 #app { display: flex; flex-direction: column; height: 100%; }
 
 #header {
-  height: var(--toolbar-h); background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  display: flex; align-items: center; padding: 0 15px; gap: 15px; z-index: 100;
+  height: var(--toolbar-h); background: var(--surface); border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; padding: 0 15px; gap: 12px; z-index: 100;
 }
 
-.logo { font-size: 18px; font-weight: 800; color: var(--accent); white-space: nowrap; }
+.logo { font-size: 18px; font-weight: 800; color: var(--accent); }
 .logo span { color: #fff; }
 
-/* ── ACTIONS ── */
 .btn {
   padding: 8px 14px; border-radius: 8px; border: none; cursor: pointer;
-  font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 6px;
-  transition: 0.2s; white-space: nowrap;
+  font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 6px; transition: 0.2s;
 }
 .btn-primary { background: var(--accent); color: #000; }
 .btn-ghost { background: transparent; color: var(--muted); border: 1px solid var(--border); }
@@ -56,70 +49,56 @@ body {
 
 #workspace { display: flex; flex: 1; overflow: hidden; }
 
-/* ── SIDEBAR (THUMBNAILS) ── */
 #sidebar {
-  width: var(--sidebar-w); background: var(--surface);
-  border-right: 1px solid var(--border);
+  width: var(--sidebar-w); background: var(--surface); border-right: 1px solid var(--border);
   display: flex; flex-direction: column; flex-shrink: 0;
 }
 #thumb-container {
-  flex: 1; overflow-y: auto; padding: 15px;
-  display: flex; flex-direction: column; gap: 12px;
+  flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 12px;
 }
 .thumb-wrapper {
-  position: relative; border: 2px solid var(--border);
-  border-radius: 6px; cursor: pointer; background: #000;
-  transition: 0.2s; overflow: hidden;
+  position: relative; border: 2px solid var(--border); border-radius: 6px;
+  cursor: pointer; background: #000; transition: 0.2s; overflow: hidden;
 }
-.thumb-wrapper.active { border-color: var(--accent); box-shadow: 0 0 10px rgba(232,255,71,0.2); }
+.thumb-wrapper.active { border-color: var(--accent); }
 .thumb-wrapper canvas { width: 100% !important; height: auto !important; display: block; }
 .thumb-label {
   position: absolute; bottom: 5px; right: 5px; background: rgba(0,0,0,0.7);
   color: #fff; font-size: 10px; padding: 2px 5px; border-radius: 3px;
 }
 
-/* ── MAIN EDITOR ── */
-#editor-area { flex: 1; display: flex; flex-direction: column; background: #0e0e12; }
+#editor-area { flex: 1; display: flex; flex-direction: column; background: #0e0e12; position: relative; }
 
 #tools {
   height: 50px; background: var(--panel); border-bottom: 1px solid var(--border);
   display: flex; align-items: center; padding: 0 15px; gap: 8px; overflow-x: auto;
 }
 .tool-btn {
-  width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
-  background: transparent; border: none; color: var(--muted); cursor: pointer; border-radius: 6px;
+  height: 34px; padding: 0 10px; display: flex; align-items: center; justify-content: center; gap: 6px;
+  background: transparent; border: 1px solid transparent; color: var(--muted); cursor: pointer; border-radius: 6px; font-size: 12px; font-weight: 600;
 }
-.tool-btn.active { background: rgba(232,255,71,0.1); color: var(--accent); }
+.tool-btn.active { background: rgba(232,255,71,0.1); color: var(--accent); border-color: rgba(232,255,71,0.2); }
 .tool-btn:hover:not(.active) { background: var(--border); }
 
-#canvas-outer {
-  flex: 1; overflow: auto; display: flex; justify-content: center; padding: 40px;
-  scroll-behavior: smooth;
-}
-#canvas-viewport { position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.5); }
-#fabric-canvas-container { position: absolute; top: 0; left: 0; }
+#canvas-outer { flex: 1; overflow: auto; display: flex; justify-content: center; padding: 40px; }
+#canvas-viewport { position: relative; box-shadow: 0 20px 50px rgba(0,0,0,0.5); background: white; }
+#fabric-canvas-container { position: absolute; top: 0; left: 0; pointer-events: all; }
 
-/* ── MOBILE ADAPTATION ── */
 @media (max-width: 768px) {
   #workspace { flex-direction: column; }
-  #sidebar { 
-    width: 100%; height: 120px; border-right: none; border-bottom: 1px solid var(--border);
-  }
+  #sidebar { width: 100%; height: 130px; border-right: none; border-bottom: 1px solid var(--border); }
   #thumb-container { flex-direction: row; }
-  .thumb-wrapper { width: 80px; flex-shrink: 0; }
-  #canvas-outer { padding: 10px; }
-  .btn span { display: none; }
+  .thumb-wrapper { width: 90px; flex-shrink: 0; }
+  .btn span, .tool-btn span { display: none; }
 }
 
 #welcome-screen {
-  position: absolute; inset: 0; background: var(--bg);
-  display: flex; flex-direction: column; align-items: center; justify-content: center;
-  z-index: 200; text-align: center; padding: 20px;
+  position: absolute; inset: 0; background: var(--bg); display: flex; flex-direction: column; 
+  align-items: center; justify-content: center; z-index: 200;
 }
 #toast {
   position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
-  padding: 10px 20px; border-radius: 8px; background: var(--panel);
-  border: 1px solid var(--border); font-size: 13px; display: none; z-index: 1000;
+  padding: 10px 20px; border-radius: 8px; background: var(--panel); border: 1px solid var(--border); font-size: 13px; display: none; z-index: 1000;
 }
 </style>
 </head>
@@ -128,19 +107,10 @@ body {
 <div id="app">
   <header id="header">
     <div class="logo">PDF<span>PRO</span></div>
-    <button class="btn btn-primary" onclick="triggerFile()">
-      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-      <span>Open File</span>
-    </button>
-    <button class="btn btn-ghost" id="dl-btn" onclick="exportPDF()" disabled>
-      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-      <span>Download</span>
-    </button>
+    <button class="btn btn-primary" onclick="triggerFile()"><span>Open PDF</span></button>
+    <button class="btn btn-ghost" id="dl-btn" onclick="exportPDF()" disabled><span>Download</span></button>
     <div style="flex:1"></div>
-    <button class="btn btn-danger" id="del-pg-btn" onclick="deleteCurrentPage()" disabled>
-      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-      <span>Delete Page</span>
-    </button>
+    <button class="btn btn-danger" id="del-pg-btn" onclick="deleteCurrentPage()" disabled><span>Delete Page</span></button>
   </header>
 
   <div id="workspace">
@@ -150,13 +120,13 @@ body {
 
     <main id="editor-area">
       <div id="tools">
-        <button class="tool-btn active" id="t-select" onclick="setTool('select')" title="Select & Move (V)"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M5 3l14 9-7 1-3 7z"/></svg></button>
-        <button class="tool-btn" id="t-redact" onclick="setTool('redact')" title="Black Box (B)"><svg width="20" height="20" fill="currentColor" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/></svg></button>
-        <button class="tool-btn" id="t-white" onclick="setTool('white')" title="White Box (W)"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/></svg></button>
-        <button class="tool-btn" id="t-text" onclick="setTool('text')" title="Add Text (T)"><svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg></button>
-        <div style="width:1px; height:24px; background:var(--border); margin:0 5px;"></div>
-        <button class="tool-btn" onclick="copyObj()" title="Copy (Ctrl+C)"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg></button>
-        <button class="tool-btn" onclick="pasteObj()" title="Paste (Ctrl+V)"><svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg></button>
+        <button class="tool-btn active" id="t-select" onclick="setTool('select')"><span>Select</span></button>
+        <button class="tool-btn" id="t-redact" onclick="setTool('redact')"><span>Redact Box</span></button>
+        <button class="tool-btn" id="t-white" onclick="setTool('white')"><span>White Box</span></button>
+        <button class="tool-btn" id="t-text" onclick="setTool('text')"><span>Add Text</span></button>
+        <div style="width:1px; height:20px; background:var(--border); margin:0 5px;"></div>
+        <button class="tool-btn" onclick="copyObj()"><span>Copy</span></button>
+        <button class="tool-btn" onclick="pasteObj()"><span>Paste</span></button>
       </div>
 
       <div id="canvas-outer">
@@ -168,9 +138,7 @@ body {
         </div>
         
         <div id="welcome-screen">
-          <h1 style="margin-bottom:10px">Quick PDF <span>Editor</span></h1>
-          <p style="color:var(--muted); margin-bottom:20px">No uploads. Fast editing. Mobile responsive.</p>
-          <button class="btn btn-primary" style="padding:15px 30px" onclick="triggerFile()">Get Started</button>
+          <button class="btn btn-primary" style="padding:15px 40px" onclick="triggerFile()">Select a PDF to Edit</button>
         </div>
       </div>
     </main>
@@ -184,7 +152,7 @@ body {
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
 let pdfDoc = null, pdfBytes = null, fCanvas = null;
-let currentPage = 1, totalPages = 0, scale = 1.5;
+let currentPage = 1, totalPages = 0, currentScale = 1.5;
 let pageEdits = {}, clipboard = null;
 let activeTool = 'select';
 
@@ -200,19 +168,16 @@ async function handleFile(input) {
 
 async function initEditor() {
   try {
-    msg('Loading...');
+    msg('Initializing...');
     pdfDoc = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
     totalPages = pdfDoc.numPages;
-    
     document.getElementById('welcome-screen').style.display = 'none';
     document.getElementById('canvas-viewport').style.display = 'block';
     document.getElementById('dl-btn').disabled = false;
     document.getElementById('del-pg-btn').disabled = false;
-
     await refreshThumbnails();
     await loadPage(1);
-    msg('Ready', '#47ffb0');
-  } catch(e) { msg('Error loading PDF', '#ff4757'); }
+  } catch(e) { msg('Error: ' + e.message, '#ff4757'); }
 }
 
 async function refreshThumbnails() {
@@ -221,29 +186,26 @@ async function refreshThumbnails() {
   for (let i = 1; i <= totalPages; i++) {
     const wrapper = document.createElement('div');
     wrapper.className = `thumb-wrapper ${i === currentPage ? 'active' : ''}`;
-    wrapper.onclick = () => loadPage(i);
-    
+    wrapper.onclick = () => { currentPage = i; loadPage(i, true); };
     const canvas = document.createElement('canvas');
     const page = await pdfDoc.getPage(i);
-    const vp = page.getViewport({ scale: 0.2 });
+    const vp = page.getViewport({ scale: 0.25 });
     canvas.width = vp.width; canvas.height = vp.height;
     await page.render({ canvasContext: canvas.getContext('2d'), viewport: vp }).promise;
-    
     const label = document.createElement('div');
     label.className = 'thumb-label'; label.textContent = i;
-    
     wrapper.append(canvas, label);
     container.appendChild(wrapper);
   }
 }
 
-async function loadPage(num) {
+async function loadPage(num, autoZoom = false) {
   if (fCanvas) pageEdits[currentPage] = fCanvas.toJSON();
   currentPage = num;
+  if (autoZoom) currentScale = 1.8; // Automatic zoom when selected
 
   const page = await pdfDoc.getPage(num);
-  const vp = page.getViewport({ scale });
-  
+  const vp = page.getViewport({ scale: currentScale });
   const pdfCanv = document.getElementById('pdf-render-canvas');
   pdfCanv.width = vp.width; pdfCanv.height = vp.height;
   await page.render({ canvasContext: pdfCanv.getContext('2d'), viewport: vp }).promise;
@@ -252,11 +214,7 @@ async function loadPage(num) {
   view.style.width = vp.width + 'px'; view.style.height = vp.height + 'px';
 
   if (fCanvas) fCanvas.dispose();
-  fCanvas = new fabric.Canvas('f-canvas', { 
-    width: vp.width, height: vp.height, 
-    selection: true 
-  });
-
+  fCanvas = new fabric.Canvas('f-canvas', { width: vp.width, height: vp.height });
   if (pageEdits[num]) fCanvas.loadFromJSON(pageEdits[num], () => fCanvas.renderAll());
   
   initFabricEvents();
@@ -264,31 +222,17 @@ async function loadPage(num) {
   document.querySelectorAll('.thumb-wrapper').forEach((t, idx) => t.classList.toggle('active', idx + 1 === num));
 }
 
-// ── IMMEDIATE DELETE ──
 async function deleteCurrentPage() {
-  if (totalPages <= 1) return msg('Cannot delete the only page', '#ff4757');
-  if (!confirm(`Permanently delete page ${currentPage}?`)) return;
-
+  if (totalPages <= 1) return msg('Action denied', '#ff4757');
   const { PDFDocument } = PDFLib;
   const doc = await PDFDocument.load(pdfBytes);
   doc.removePage(currentPage - 1);
   pdfBytes = await doc.save();
-
-  // Shift edits logic
-  const newEdits = {};
-  Object.keys(pageEdits).forEach(k => {
-    const p = parseInt(k);
-    if (p < currentPage) newEdits[p] = pageEdits[p];
-    if (p > currentPage) newEdits[p-1] = pageEdits[p];
-  });
-  pageEdits = newEdits;
-
   pdfDoc = await pdfjsLib.getDocument({ data: pdfBytes }).promise;
   totalPages = pdfDoc.numPages;
-  const targetPage = currentPage > totalPages ? totalPages : currentPage;
-  
+  const next = currentPage > totalPages ? totalPages : currentPage;
   await refreshThumbnails();
-  await loadPage(targetPage);
+  await loadPage(next);
   msg('Page Deleted');
 }
 
@@ -298,108 +242,74 @@ function setTool(t) {
   if (!fCanvas) return;
   fCanvas.selection = (t === 'select');
   fCanvas.defaultCursor = (t === 'select') ? 'default' : 'crosshair';
-  fCanvas.discardActiveObject().renderAll();
 }
 
 function initFabricEvents() {
   let isDown = false, startX, startY, activeObj;
-
   fCanvas.on('mouse:down', (o) => {
     if (activeTool === 'select') return;
     isDown = true;
     const p = fCanvas.getPointer(o.e);
     startX = p.x; startY = p.y;
-
     if (activeTool === 'redact' || activeTool === 'white') {
       activeObj = new fabric.Rect({
         left: p.x, top: p.y, width: 0, height: 0,
-        fill: activeTool === 'redact' ? 'black' : 'white',
-        strokeWidth: 0, selectable: true
+        fill: activeTool === 'redact' ? 'black' : 'white', selectable: true
       });
       fCanvas.add(activeObj);
     } else if (activeTool === 'text') {
-      const txt = prompt("Enter Text:");
-      if (txt) {
-        fCanvas.add(new fabric.IText(txt, { left: p.x, top: p.y, fontSize: 20, fill: '#e8ff47' }));
-        setTool('select');
-      }
+      const txt = prompt("Text:");
+      if (txt) fCanvas.add(new fabric.IText(txt, { left: p.x, top: p.y, fontSize: 24, fill: '#e8ff47' }));
       isDown = false;
     }
   });
-
   fCanvas.on('mouse:move', (o) => {
     if (!isDown || activeTool === 'select') return;
     const p = fCanvas.getPointer(o.e);
-    activeObj.set({
-      width: Math.abs(startX - p.x),
-      height: Math.abs(startY - p.y),
-      left: Math.min(p.x, startX),
-      top: Math.min(p.y, startY)
-    });
+    activeObj.set({ width: Math.abs(startX-p.x), height: Math.abs(startY-p.y), left: Math.min(p.x, startX), top: Math.min(p.y, startY) });
     fCanvas.renderAll();
   });
-
-  fCanvas.on('mouse:up', () => { 
-    if (isDown && activeTool !== 'select') setTool('select');
-    isDown = false; 
-  });
+  fCanvas.on('mouse:up', () => { isDown = false; if(activeTool!=='select') setTool('select'); });
 }
 
-// ── CLIPBOARD LOGIC ──
-function copyObj() {
-  fCanvas.getActiveObject()?.clone(cloned => { clipboard = cloned; msg('Copied'); });
-}
+function copyObj() { fCanvas.getActiveObject()?.clone(c => clipboard = c); msg('Box Copied'); }
 function pasteObj() {
   if (!clipboard) return;
   clipboard.clone(cloned => {
-    fCanvas.discardActiveObject();
-    cloned.set({ left: cloned.left + 20, top: cloned.top + 20, evented: true });
-    if (cloned.type === 'activeSelection') cloned.canvas = fCanvas;
-    fCanvas.add(cloned); fCanvas.setActiveObject(cloned);
-    fCanvas.requestRenderAll();
+    cloned.set({ left: cloned.left + 15, top: cloned.top + 15, evented: true });
+    fCanvas.add(cloned); fCanvas.setActiveObject(cloned); fCanvas.renderAll();
   });
 }
 
-// ── EXPORT ──
 async function exportPDF() {
   if (fCanvas) pageEdits[currentPage] = fCanvas.toJSON();
-  msg('Processing Edits...');
+  msg('Generating PDF...');
   try {
-    const { PDFDocument, rgb, grayscale } = PDFLib;
+    const { PDFDocument, grayscale, rgb } = PDFLib;
     const doc = await PDFDocument.load(pdfBytes);
     const pages = doc.getPages();
-
     for (let i = 0; i < pages.length; i++) {
       const edits = pageEdits[i + 1];
       if (!edits || !edits.objects) continue;
-      
-      const page = pages[i];
-      const { width, height } = page.getSize();
-      const pjsPage = await pdfDoc.getPage(i+1);
-      const vp = pjsPage.getViewport({ scale });
+      const pdfPage = pages[i];
+      const { width, height } = pdfPage.getSize();
+      const pjsPage = await pdfDoc.getPage(i + 1);
+      const vp = pjsPage.getViewport({ scale: currentScale });
       const sx = width / vp.width, sy = height / vp.height;
-
       for (const o of edits.objects) {
-        const x = o.left * sx;
-        const y = height - ((o.top + (o.height * (o.scaleY || 1))) * sy);
+        const x = o.left * sx, y = height - ((o.top + (o.height * o.scaleY)) * sy);
         if (o.type === 'rect') {
-          page.drawRectangle({
-            x, y, width: o.width * o.scaleX * sx, height: o.height * o.scaleY * sy,
-            color: o.fill === 'black' ? grayscale(0) : grayscale(1)
-          });
+          pdfPage.drawRectangle({ x, y, width: o.width * o.scaleX * sx, height: o.height * o.scaleY * sy, color: o.fill === 'black' ? grayscale(0) : grayscale(1) });
         } else if (o.type === 'i-text' || o.type === 'text') {
-          page.drawText(o.text, { 
-            x, y: height - (o.top * sy) - (o.fontSize * sy), 
-            size: o.fontSize * sy, color: rgb(0.9, 1, 0.2) 
-          });
+          pdfPage.drawText(o.text, { x, y: height - (o.top * sy) - (o.fontSize * sy), size: o.fontSize * sy, color: rgb(0.9, 1, 0) });
         }
       }
     }
     const b = await doc.save();
     const link = document.createElement('a');
     link.href = URL.createObjectURL(new Blob([b], {type:'application/pdf'}));
-    link.download = "edited_pro.pdf"; link.click();
-    msg('Downloaded!', '#47ffb0');
+    link.download = "final_output.pdf"; link.click();
+    msg('Done!', '#47ffb0');
   } catch(e) { msg('Error exporting', '#ff4757'); }
 }
 
@@ -409,14 +319,8 @@ function msg(m, c = '#fff') {
   setTimeout(() => t.style.display = 'none', 2500);
 }
 
-// Keyboard Shortcuts
 window.addEventListener('keydown', (e) => {
-  if (e.ctrlKey && e.key === 'c') copyObj();
-  if (e.ctrlKey && e.key === 'v') pasteObj();
-  if (e.key === 'Backspace' || e.key === 'Delete') {
-    fCanvas.getActiveObjects().forEach(obj => fCanvas.remove(obj));
-    fCanvas.discardActiveObject().renderAll();
-  }
+  if (e.key === 'Delete' || e.key === 'Backspace') { fCanvas.getActiveObjects().forEach(obj => fCanvas.remove(obj)); fCanvas.discardActiveObject().renderAll(); }
 });
 </script>
 </body>
